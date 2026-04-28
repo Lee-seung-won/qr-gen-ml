@@ -11,7 +11,7 @@
 ## 진행 상태
 
 - [x] 저장소 초기화 (`README`, `LICENSE`, `.gitignore`)
-- [ ] 웹 앱 스캐폴드 및 `/health`
+- [x] 웹 앱 스캐폴드 및 `/health`
 - [ ] QR 생성 API
 - [ ] 테스트 및 CI
 - [ ] Docker 및 Render 배포
