@@ -27,3 +27,7 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -q
+
+      - name: Build Docker image
+        if: ${{ hashFiles('Dockerfile') != '' }}
+        run: docker build -t qr-gen-web:ci .
