@@ -4,7 +4,6 @@ import qrcode
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
 
-
 app = FastAPI(title="qr-gen-web")
 
 
