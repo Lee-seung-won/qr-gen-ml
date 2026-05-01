@@ -8,10 +8,20 @@
 - `/health` 엔드포인트로 서비스 상태 확인
 - GitHub Actions, Docker, Render까지 이어지는 DevOps 파이프라인 구성
 
+## Docker
+
+```bash
+docker build -t qr-gen-web .
+docker run --rm -p 8000:8000 qr-gen-web
+```
+
+브라우저에서 `http://localhost:8000` 접속.
+
 ## 진행 상태
 
 - [x] 저장소 초기화 (`README`, `LICENSE`, `.gitignore`)
 - [x] 웹 앱 스캐폴드 및 `/health`
 - [x] QR 생성 API
-- [ ] 테스트 및 CI
-- [ ] Docker 및 Render 배포
+- [x] 테스트 및 CI
+- [x] Docker 이미지
+- [ ] Render 배포
