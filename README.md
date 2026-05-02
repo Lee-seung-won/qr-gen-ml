@@ -15,6 +15,8 @@ docker build -t qr-gen-web .
 docker run --rm -p 8000:8000 qr-gen-web
 ```
 
+기본 포트는 `8000`. 클라우드에서 넘기는 `PORT` 환경 변수를 그대로 씁니다.
+
 브라우저에서 `http://localhost:8000` 접속.
 
 ## 진행 상태
