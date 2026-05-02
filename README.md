@@ -19,6 +19,13 @@ docker run --rm -p 8000:8000 qr-gen-web
 
 브라우저에서 `http://localhost:8000` 접속.
 
+## 배포
+
+- URL: https://qrgenerator-zq98.onrender.com
+- 상태 확인: https://qrgenerator-zq98.onrender.com/health
+
+Render 무료 플랜은 일정 시간 요청이 없으면 슬립했다가 첫 요청 때 깰 수 있습니다.
+
 ## 진행 상태
 
 - [x] 저장소 초기화 (`README`, `LICENSE`, `.gitignore`)
@@ -26,4 +33,4 @@ docker run --rm -p 8000:8000 qr-gen-web
 - [x] QR 생성 API
 - [x] 테스트 및 CI
 - [x] Docker 이미지
-- [ ] Render 배포
+- [x] Render 배포
