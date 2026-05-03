@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import base64
+import logging
+import time
+import uuid
+from contextlib import asynccontextmanager
 from io import BytesIO
 from typing import Literal, Self
 
@@ -9,6 +13,9 @@ import qrcode.constants as qr_const
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
+from starlette.middleware.base import BaseHTTPMiddleware
+
+_LOG = logging.getLogger("qr_gen")
 
 _ECC_MAP: dict[str, int] = {
     "L": qr_const.ERROR_CORRECT_L,
@@ -34,7 +41,43 @@ def build_qr_png(text: str, box_size: int, border: int, ecc: str) -> tuple[bytes
     return buffer.getvalue(), (w, h)
 
 
-app = FastAPI(title="qr-gen-web")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    yield
+
+
+class RequestLogMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        request_id = str(uuid.uuid4())
+        start = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except BaseException:
+            duration_ms = int((time.perf_counter() - start) * 1000)
+            _LOG.exception(
+                "event=request_failed request_id=%s method=%s path=%s duration_ms=%s",
+                request_id,
+                request.method,
+                request.url.path,
+                duration_ms,
+            )
+            raise
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        _LOG.info(
+            "event=request_completed request_id=%s method=%s path=%s status=%s duration_ms=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+        )
+        response.headers["X-Request-Id"] = request_id
+        return response
+
+
+app = FastAPI(title="qr-gen-web", lifespan=lifespan)
+app.add_middleware(RequestLogMiddleware)
 
 
 class QrCreateRequest(BaseModel):
