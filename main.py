@@ -1,10 +1,14 @@
+from __future__ import annotations
+
+import base64
 from io import BytesIO
-from typing import Literal
+from typing import Literal, Self
 
 import qrcode
 import qrcode.constants as qr_const
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 _ECC_MAP: dict[str, int] = {
     "L": qr_const.ERROR_CORRECT_L,
@@ -33,6 +37,33 @@ def build_qr_png(text: str, box_size: int, border: int, ecc: str) -> tuple[bytes
 app = FastAPI(title="qr-gen-web")
 
 
+class QrCreateRequest(BaseModel):
+    text: str = Field(..., max_length=500)
+    box_size: int = Field(10, ge=1, le=30)
+    border: int = Field(4, ge=0, le=20)
+    ecc: Literal["L", "M", "Q", "H"] = "M"
+
+    @field_validator("text")
+    @classmethod
+    def strip_text(cls, v: str) -> str:
+        return v.strip()
+
+    @model_validator(mode="after")
+    def validate_text(self) -> Self:
+        if not self.text:
+            raise ValueError("text must not be empty")
+        if len(self.text) > 500:
+            raise ValueError("text too long")
+        return self
+
+
+class QrCreateResponse(BaseModel):
+    format: Literal["png"] = "png"
+    image_base64: str
+    width: int
+    height: int
+
+
 @app.get("/")
 def read_root() -> HTMLResponse:
     return HTMLResponse(
@@ -47,6 +78,7 @@ def read_root() -> HTMLResponse:
   <body>
     <h1>QR 생성기</h1>
     <p>텍스트 또는 URL을 입력하면 QR 이미지(PNG)를 생성합니다.</p>
+    <p>프로그램 연동은 <code>POST /api/qr</code> JSON API를 사용하세요.</p>
     <form action="/qr" method="get">
       <p>
         <label for="text">입력값</label>
@@ -94,3 +126,10 @@ def create_qr(
         raise HTTPException(status_code=422, detail="text must not be empty")
     png_bytes, _wh = build_qr_png(text, box_size, border, ecc)
     return Response(content=png_bytes, media_type="image/png")
+
+
+@app.post("/api/qr", response_model=QrCreateResponse)
+def create_qr_json(body: QrCreateRequest) -> QrCreateResponse:
+    png_bytes, (w, h) = build_qr_png(body.text, body.box_size, body.border, body.ecc)
+    b64 = base64.standard_b64encode(png_bytes).decode("ascii")
+    return QrCreateResponse(image_base64=b64, width=w, height=h)
