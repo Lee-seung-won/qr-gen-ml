@@ -8,6 +8,25 @@
 - `/health` 엔드포인트로 서비스 상태 확인
 - GitHub Actions, Docker, Render까지 이어지는 DevOps 파이프라인 구성
 
+## 구성
+
+| 구분 | 설명 |
+|------|------|
+| 앱 | FastAPI 단일 모듈 `main.py` (라우트·QR 렌더·요청 로깅 미들웨어) |
+| 이미지 | `qrcode` + Pillow로 PNG 바이너리 생성 |
+| 테스트 | `pytest` + `TestClient` (현재 26개) |
+
+## API
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/` | QR 입력 폼(HTML). `GET /qr`로 전송 |
+| GET | `/health` | `{"status":"ok"}` JSON |
+| GET | `/qr` | 쿼리 `text`(필수), `box_size`(1–30, 기본 10), `border`(0–20, 기본 4), `ecc`(`L`/`M`/`Q`/`H`, 기본 `M`). 응답 PNG |
+| POST | `/api/qr` | JSON 본문 동일 옵션 + `text`. 응답 `format`, `image_base64`, `width`, `height` |
+
+모든 응답에 `X-Request-Id`(UUID) 헤더가 붙고, 서버 로그에 `event=request_completed`와 `duration_ms`가 남습니다.
+
 ## Docker
 
 ```bash
