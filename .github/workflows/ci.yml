@@ -29,8 +29,14 @@ jobs:
       - name: Run Ruff
         run: python -m ruff check .
 
-      - name: Run tests
-        run: python -m pytest -q
+      - name: Run tests with coverage
+        run: python -m pytest -q --cov=main --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
 
       - name: Build Docker image
         if: ${{ hashFiles('Dockerfile') != '' }}
