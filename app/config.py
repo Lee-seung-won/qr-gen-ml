@@ -1,7 +1,10 @@
 import os
 
 MODEL_MODE = "ml"
-MLFLOW_TRACKING_URI = "https://juggle-sturdily-starlet.ngrok-free.dev"
+MLFLOW_TRACKING_URI = os.getenv(
+    "MLFLOW_TRACKING_URI",
+    "https://xxxx.ngrok-free.dev",
+)
 MODEL_URI = "models:/qr-safety-model@champion"
 
 TRAIN_FILE_NAME = "train.csv"

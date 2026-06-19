@@ -40,8 +40,8 @@ docker run --rm -p 8000:8000 qr-gen-web
 
 ## 배포
 
-- URL: https://qrgenerator-zq98.onrender.com
-- 상태 확인: https://qrgenerator-zq98.onrender.com/health
+- URL: https://qr-gen-ml.onrender.com
+- 상태 확인: https://qr-gen-ml.onrender.com/health
 
 Render 무료 플랜은 일정 시간 요청이 없으면 슬립했다가 첫 요청 때 깰 수 있습니다.
 
