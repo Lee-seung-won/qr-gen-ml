@@ -6,6 +6,7 @@ import joblib
 import mlflow
 import mlflow.sklearn
 import pandas as pd
+from mlflow.tracking import MlflowClient
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
@@ -63,13 +64,15 @@ def train_and_log_models(
     y_train: pd.Series,
     x_test: pd.Series,
     y_test: pd.Series,
-) -> tuple[str, Pipeline, float]:
+) -> tuple[str, Pipeline, float, int]:
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment("qr-safety")
+    client = MlflowClient()
 
     best_name = ""
     best_model: Pipeline | None = None
     best_test_accuracy = -1.0
+    best_version = 0
 
     for name, pipeline in MODELS.items():
         with mlflow.start_run(run_name=name):
@@ -79,6 +82,7 @@ def train_and_log_models(
             test_pred = pipeline.predict(x_test)
             train_accuracy = accuracy_score(y_train, train_pred)
             test_accuracy = accuracy_score(y_test, test_pred)
+            run_id = mlflow.active_run().info.run_id
 
             mlflow.log_param("model_type", name)
             mlflow.log_metric("train_accuracy", train_accuracy)
@@ -89,20 +93,37 @@ def train_and_log_models(
                 registered_model_name="qr-safety-model",
             )
 
+            model_version = next(
+                int(version.version)
+                for version in client.search_model_versions("name='qr-safety-model'")
+                if version.run_id == run_id
+            )
+
             print(
                 f"[{name}] train_accuracy={train_accuracy:.4f} "
-                f"test_accuracy={test_accuracy:.4f}"
+                f"test_accuracy={test_accuracy:.4f} "
+                f"version={model_version}"
             )
 
             if test_accuracy > best_test_accuracy:
                 best_test_accuracy = test_accuracy
                 best_name = name
                 best_model = pipeline
+                best_version = model_version
 
-    if best_model is None:
+    if best_model is None or best_version == 0:
         raise RuntimeError("No model was trained.")
 
-    return best_name, best_model, best_test_accuracy
+    return best_name, best_model, best_test_accuracy, best_version
+
+
+def assign_champion_alias(version: int, model_name: str, test_accuracy: float) -> None:
+    client = MlflowClient()
+    client.set_registered_model_alias("qr-safety-model", "champion", version)
+    print(
+        f"Champion alias set: qr-safety-model v{version} "
+        f"({model_name}, test_accuracy={test_accuracy:.4f})"
+    )
 
 
 def save_best_model(model: Pipeline) -> Path:
@@ -114,9 +135,10 @@ def save_best_model(model: Pipeline) -> Path:
 
 def main() -> None:
     x_train, y_train, x_test, y_test = load_datasets()
-    best_name, best_model, best_test_accuracy = train_and_log_models(
+    best_name, best_model, best_test_accuracy, best_version = train_and_log_models(
         x_train, y_train, x_test, y_test
     )
+    assign_champion_alias(best_version, best_name, best_test_accuracy)
     model_path = save_best_model(best_model)
     print(f"Best model: {best_name} (test_accuracy={best_test_accuracy:.4f})")
     print(f"Saved artifact: {model_path}")
