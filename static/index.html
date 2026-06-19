@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QR 안전성 검사</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg0: #0c0e14;
+        --bg1: #12151f;
+        --card: rgba(24, 28, 40, 0.85);
+        --stroke: rgba(120, 140, 200, 0.22);
+        --text: #e8ebf4;
+        --muted: #8b93a8;
+        --accent: #6c9eff;
+        --safe: #34d399;
+        --spam: #f87171;
+        --radius: 16px;
+        --shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+        color: var(--text);
+        background: linear-gradient(165deg, var(--bg0) 0%, #151a28 48%, var(--bg1) 100%);
+        display: flex;
+        justify-content: center;
+        padding: clamp(1.25rem, 4vw, 2.5rem);
+      }
+      .shell {
+        width: min(100%, 480px);
+      }
+      h1 {
+        margin: 0 0 0.35rem;
+        font-size: 1.4rem;
+      }
+      .sub {
+        margin: 0 0 1.25rem;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 1.5rem;
+      }
+      label {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.35rem;
+      }
+      textarea {
+        width: 100%;
+        min-height: 110px;
+        padding: 0.75rem;
+        border-radius: 10px;
+        border: 1px solid var(--stroke);
+        background: rgba(12, 14, 20, 0.55);
+        color: var(--text);
+        font: inherit;
+        resize: vertical;
+      }
+      button {
+        width: 100%;
+        margin-top: 1rem;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 12px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        color: #0c0e14;
+        background: linear-gradient(135deg, var(--accent), #9db9ff);
+      }
+      .result {
+        margin-top: 1.25rem;
+        padding: 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--stroke);
+        background: rgba(12, 14, 20, 0.45);
+        display: none;
+      }
+      .result.show {
+        display: block;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .badge.safe {
+        background: rgba(52, 211, 153, 0.15);
+        color: var(--safe);
+      }
+      .badge.spam {
+        background: rgba(248, 113, 113, 0.15);
+        color: var(--spam);
+      }
+      .meta {
+        margin-top: 0.85rem;
+        font-size: 0.82rem;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .meta code {
+        color: var(--accent);
+        word-break: break-all;
+      }
+      .error {
+        color: var(--spam);
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <h1>QR 안전성 검사</h1>
+      <p class="sub">URL 또는 텍스트를 입력하면 ML 모델이 safe / spam 을 분류합니다.</p>
+      <div class="card">
+        <form id="classify-form">
+          <label for="text">검사할 내용</label>
+          <textarea
+            id="text"
+            name="text"
+            required
+            placeholder="https://example.com 또는 메시지"
+          ></textarea>
+          <button type="submit">안전성 검사</button>
+        </form>
+        <div id="result" class="result" aria-live="polite">
+          <div>분류: <span id="label" class="badge"></span></div>
+          <div style="margin-top: 0.5rem">신뢰도: <strong id="score"></strong></div>
+          <div class="meta">
+            <div>model_type: <code id="model-type"></code></div>
+            <div>test_accuracy: <code id="test-accuracy"></code></div>
+            <div>run_id: <code id="run-id"></code></div>
+          </div>
+        </div>
+        <p id="error" class="error" hidden></p>
+      </div>
+    </div>
+    <script>
+      const form = document.getElementById("classify-form");
+      const result = document.getElementById("result");
+      const errorEl = document.getElementById("error");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorEl.hidden = true;
+        result.classList.remove("show");
+
+        const text = document.getElementById("text").value;
+        try {
+          const response = await fetch("/classify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+          if (!response.ok) {
+            throw new Error("분류 요청에 실패했습니다.");
+          }
+          const data = await response.json();
+          const labelEl = document.getElementById("label");
+          labelEl.textContent = data.label;
+          labelEl.className = "badge " + data.label;
+          document.getElementById("score").textContent = Number(data.score).toFixed(4);
+          document.getElementById("model-type").textContent = data.model_info.model_type;
+          document.getElementById("test-accuracy").textContent = data.model_info.test_accuracy;
+          document.getElementById("run-id").textContent = data.model_info.run_id;
+          result.classList.add("show");
+        } catch (err) {
+          errorEl.textContent = err.message;
+          errorEl.hidden = false;
+        }
+      });
+    </script>
+  </body>
+</html>
