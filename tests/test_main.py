@@ -5,11 +5,13 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_root_endpoint_shows_qr_form() -> None:
+def test_root_endpoint_shows_safety_form() -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
-    assert "<form action=\"/qr\" method=\"get\">" in response.text
+    assert "QR 안전성 검사" in response.text
+    assert 'fetch("/classify"' in response.text
+    assert 'name="text"' in response.text
 
 
 def test_health_endpoint_returns_ok() -> None:

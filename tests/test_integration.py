@@ -12,11 +12,9 @@ def test_index_serves_html_with_form_wiring() -> None:
     assert ct.startswith("text/html")
     assert "charset=utf-8" in ct.replace(" ", "").lower()
     html = response.text
-    assert "POST /api/qr" in html
-    assert "<form action=\"/qr\" method=\"get\">" in html
+    assert "QR 안전성 검사" in html
+    assert 'fetch("/classify"' in html
     assert 'name="text"' in html
-    assert 'minlength="1"' in html
-    assert 'maxlength="500"' in html
     assert "required" in html
 
 

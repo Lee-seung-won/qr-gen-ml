@@ -39,7 +39,7 @@ jobs:
 
       - name: Run tests with coverage
         if: matrix.python-version == '3.12'
-        run: python -m pytest -q --cov=main --cov-report=term-missing --cov-report=xml
+        run: python -m pytest -q --cov=app --cov-report=term-missing --cov-report=xml
 
       - name: Run tests
         if: matrix.python-version != '3.12'
