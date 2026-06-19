@@ -1,0 +1,46 @@
+name: Train
+
+on:
+  push:
+    paths:
+      - "ml/**"
+      - "app/**"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/train.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: train-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Train models
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: python -m ml.train
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model-files
+          path: ml/artifacts/
